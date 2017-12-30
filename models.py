@@ -6,6 +6,9 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from constant import get_symbol_id
 
+from torch.nn.utils.rnn import pack_padded_sequence
+from torch.nn.utils.rnn import pad_packed_sequence
+
 
 class EncoderCNN(nn.Module):
     def __init__(self, emb_dim):
@@ -25,6 +28,53 @@ class EncoderCNN(nn.Module):
         features = features.view(features.size(0), -1)
         features = self.A(features)
         return features
+
+
+class EncoderRNN(nn.Module):
+    def __init__(self, voc_size=None, emb_size=None, hidden_size=None, n_layers=1, bidirectional=False, dropout=0.2,
+                 padding_idx=0):
+        '''
+        Load the pretrained ResNet152 and replace fc
+        '''
+        super(EncoderRNN, self).__init__()
+
+        self.n_layers = n_layers
+        self.bidirectional = bidirectional
+        self.dropout = nn.Dropout(dropout)
+
+        self.n_directions = 2 if bidirectional else 1
+        self.hidden_size = hidden_size
+
+        self.embedding = nn.Embedding(voc_size, emb_size, padding_idx=padding_idx)
+        self.gru = nn.GRU(emb_size, self.hidden_size, num_layers=n_layers,
+                          dropout=dropout, bidirectional=self.bidirectional)
+
+    def forward(self, input, lengths):
+        """Feed forward process of encoder
+
+        Args:
+            input: Variable(LongTensor(batch_size, N)), N is the length of input sequence
+            mask: input mask
+
+        Returns:
+            output: (N, batch_size, hidden_size)
+            hidden: (n_layers * n_directions, batch_size, hidden_size)
+        """
+        # formalize the batch into descending length order.
+        hidden = self.init_hidden(input.size()[0])
+        emb = torch.transpose(self.embedding(input), 0, 1)
+        emb = pack_padded_sequence(emb, lengths)
+        output, hidden = self.gru(emb, hidden)
+        output, _ = pad_packed_sequence(output)
+        return output, hidden
+
+    def init_hidden(self, batch_size):
+        """Inits hidden states
+
+        Returns:
+            all zero hidden state: (n_layers * n_directions, batch_size, hidden_size)
+        """
+        return Variable(torch.zeros(self.n_layers*self.n_directions, batch_size, self.hidden_size), requires_grad=False)
 
 
 class FactoredLSTM(nn.Module):
@@ -119,6 +169,7 @@ class FactoredLSTM(nn.Module):
         if mode == "factual":
             if features is None:
                 sys.stderr.write("features is None!")
+            features = features.squeeze(0)
             embedded = torch.cat((features.unsqueeze(1), embedded), 1)
 
         # initialize hidden state

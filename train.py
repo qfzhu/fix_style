@@ -6,7 +6,7 @@ from torch.autograd import Variable
 from build_vocab import Vocab
 from data_loader import get_data_loader
 from data_loader import get_styled_data_loader
-from models import EncoderCNN
+from models import EncoderRNN
 from models import FactoredLSTM
 from loss import masked_cross_entropy
 
@@ -49,7 +49,7 @@ def main(args):
     hidden_dim = args.hidden_dim
     factored_dim = args.factored_dim
     vocab_size = len(vocab)
-    encoder = EncoderCNN(emb_dim)
+    encoder = EncoderRNN(voc_size=vocab_size, emb_size=emb_dim, hidden_size=emb_dim)
     decoder = FactoredLSTM(emb_dim, hidden_dim, factored_dim, vocab_size)
 
     if torch.cuda.is_available():
@@ -58,7 +58,7 @@ def main(args):
 
     # loss and optimizer
     criterion = masked_cross_entropy
-    cap_params = list(decoder.parameters()) + list(encoder.A.parameters())
+    cap_params = list(decoder.parameters()) + list(encoder.parameters())
     lang_params = list(decoder.parameters())
     optimizer_cap = torch.optim.Adam(cap_params, lr=args.lr_caption)
     optimizer_lang = torch.optim.Adam(lang_params, lr=args.lr_language)
@@ -69,16 +69,17 @@ def main(args):
     epoch_num = args.epoch_num
     for epoch in range(epoch_num):
         # caption
-        for i, (images, captions, lengths) in enumerate(data_loader):
-            images = to_var(images, volatile=True)
-            captions = to_var(captions.long())
+        for i, (messages, m_lengths, targets, t_lengths) in enumerate(data_loader):
+
+            messages = to_var(messages.long())
+            targets = to_var(targets.long())
 
             # forward, backward and optimize
             decoder.zero_grad()
             encoder.zero_grad()
-            features = encoder(images)
-            outputs = decoder(captions, features, mode="factual")
-            loss = criterion(outputs[:, 1:, :].contiguous(), captions[:, 1:].contiguous(), lengths - 1)
+            output, features = encoder(messages, list(m_lengths))
+            outputs = decoder(targets, features, mode="factual")
+            loss = criterion(outputs[:, 1:, :].contiguous(), targets[:, 1:].contiguous(), t_lengths - 1)
             loss.backward()
             optimizer_cap.step()
 

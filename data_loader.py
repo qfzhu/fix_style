@@ -27,40 +27,44 @@ class Flickr7kDataset(Dataset):
 
     def _get_imgname_and_caption(self, caption_file):
         '''extract image name and caption from factual caption file'''
-        with open(caption_file, 'r') as f:
-            res = f.readlines()
+        with open(caption_file+'.m', 'r') as f:
+            messages = f.readlines()
+        with open(caption_file+'.t', 'r') as f:
+            targets = f.readlines()
 
-        imgname_caption_list = []
-        r = re.compile(r'#\d*')
-        for line in res:
-            img_and_cap = r.split(line)
-            img_and_cap = [x.strip() for x in img_and_cap]
-            imgname_caption_list.append(img_and_cap)
+        assert len(messages) == len(targets)
+        return zip(messages, targets)
 
-        return imgname_caption_list
+        # imgname_caption_list = []
+        # r = re.compile(r'#\d*')
+        # for line in res:
+        #     img_and_cap = r.split(line)
+        #     img_and_cap = [x.strip() for x in img_and_cap]
+        #     imgname_caption_list.append(img_and_cap)
+        #
+        # return imgname_caption_list
 
     def __len__(self):
         return len(self.imgname_caption_list)
 
     def __getitem__(self, ix):
         '''return one data pair (image and captioin)'''
-        img_name = self.imgname_caption_list[ix][0]
-        img_name = os.path.join(self.img_dir, img_name)
-        caption = self.imgname_caption_list[ix][1]
-
-        image = skimage.io.imread(img_name)
-        if self.transform is not None:
-            image = self.transform(image)
+        message = self.imgname_caption_list[ix][0]
+        target = self.imgname_caption_list[ix][1]
 
         # convert caption to word ids
-        r = re.compile("\.")
-        tokens = nltk.tokenize.word_tokenize(r.sub("", caption).lower())
-        caption = []
-        caption.append(self.vocab('<s>'))
-        caption.extend([self.vocab(token) for token in tokens])
-        caption.append(self.vocab('</s>'))
-        caption = torch.Tensor(caption)
-        return image, caption
+        def convert(s):
+            r = re.compile("\.")
+            tokens = nltk.tokenize.word_tokenize(r.sub("", s).lower())
+            caption = []
+            caption.append(self.vocab('<s>'))
+            caption.extend([self.vocab(token) for token in tokens])
+            caption.append(self.vocab('</s>'))
+            caption = torch.Tensor(caption)
+            return caption
+        mes = convert(message)
+        tar = convert(target)
+        return mes, tar
 
 
 class FlickrStyle7kDataset(Dataset):
@@ -158,17 +162,26 @@ class Rescale:
 def collate_fn(data):
     '''create minibatch tensors from data(list of tuple(image, caption))'''
     data.sort(key=lambda x: len(x[1]), reverse=True)
-    images, captions = zip(*data)
+    mes, trg = zip(*data)
 
-    # images : tuple of 3D tensor -> 4D tensor
-    images = torch.stack(images, 0)
+    def col(samples):
+        lengths = torch.LongTensor([len(sample) for sample in samples])
+        samples = [pad_sequence(sample, max(lengths)) for sample in samples]
+        samples = torch.stack(samples, 0)
 
-    # captions : tuple of 1D Tensor -> 2D tensor
-    lengths = torch.LongTensor([len(cap) for cap in captions])
-    captions = [pad_sequence(cap, max(lengths)) for cap in captions]
-    captions = torch.stack(captions, 0)
+        return samples, lengths
 
-    return images, captions, lengths
+    mes, m_lengths = col(mes)
+    trg, t_lengths = col(trg)
+    return mes, m_lengths, trg, t_lengths
+
+
+    # # captions : tuple of 1D Tensor -> 2D tensor
+    # lengths = torch.LongTensor([len(cap) for cap in captions])
+    # captions = [pad_sequence(cap, max(lengths)) for cap in captions]
+    # captions = torch.stack(captions, 0)
+    #
+    # return images, captions, lengths
 
 
 def collate_fn_styled(captions):
@@ -197,11 +210,14 @@ if __name__ == "__main__":
     data_loader = get_data_loader(img_path, cap_path, vocab, 3)
     styled_data_loader = get_styled_data_loader(cap_path_styled, vocab, 3)
 
-    for i, (captions, lengths) in enumerate(styled_data_loader):
-        print(i)
-        # print(images.shape)
-        print(captions[:, 1:])
-        print(lengths - 1)
-        print()
+    for i, (messages, m_lengths, targets, t_lengths) in enumerate(data_loader):
+        # print(i)
+        # # print(images.shape)
+        # print(messages)
+        # for sample in messages:
+        #     for w in sample:
+        #         print vocab.i2w[w]
+        # print(m_lengths - 1)
+        # print()
         if i == 3:
             break
