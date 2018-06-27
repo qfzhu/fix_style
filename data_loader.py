@@ -55,7 +55,8 @@ class Flickr7kDataset(Dataset):
         # convert caption to word ids
         def convert(s):
             r = re.compile("\.")
-            tokens = nltk.tokenize.word_tokenize(r.sub("", s).lower())
+            # tokens = nltk.tokenize.word_tokenize(r.sub("", s).lower())
+            tokens = s.strip().split(' ')
             caption = []
             caption.append(self.vocab('<s>'))
             caption.extend([self.vocab(token) for token in tokens])
