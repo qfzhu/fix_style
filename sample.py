@@ -34,11 +34,11 @@ def main():
         vocab = pickle.load(f)
 
     # build model
-    encoder = EncoderRNN(voc_size=60376, emb_size=300, hidden_size=300)
+    encoder = EncoderRNN(voc_size=60736, emb_size=300, hidden_size=300)
     decoder = FactoredLSTM(300, 512, 512, len(vocab))
 
-    encoder.load_state_dict(torch.load('pretrained_models/encoder-15.pkl'))
-    decoder.load_state_dict(torch.load('pretrained_models/decoder-15.pkl'))
+    encoder.load_state_dict(torch.load('pretrained_models/encoder-3.pkl'))
+    decoder.load_state_dict(torch.load('pretrained_models/decoder-3.pkl'))
 
     # prepare images
     # transform = transforms.Compose([
@@ -48,7 +48,7 @@ def main():
     # img_names, img_list = load_sample_images('sample_images/', transform)
     # image = to_var(img_list[30], volatile=True)
 
-    data_loader = get_data_loader('', 'data/factual_train.txt.m', vocab, 1)
+    data_loader = get_data_loader('', 'data/factual_train.txt', vocab, 1)
 
     # if torch.cuda.is_available():
     #     encoder = encoder.cuda()
@@ -61,8 +61,8 @@ def main():
         # forward, backward and optimize
         output, features = encoder(messages, list(m_lengths))
         outputs = decoder.sample(features, mode="factual")
-        caption = [vocab.i2w[x] for x in output]
-        print caption
+        caption = [vocab.i2w[x] for x in outputs]
+        print(''.join(caption))
 
     # farward
     # features = encoder(image)
