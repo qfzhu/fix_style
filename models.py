@@ -63,6 +63,8 @@ class EncoderRNN(nn.Module):
         # formalize the batch into descending length order.
         hidden = self.init_hidden(input.size()[0])
         emb = torch.transpose(self.embedding(input), 0, 1)
+        if emb.is_cuda:
+            hidden = hidden.cuda()
         emb = pack_padded_sequence(emb, lengths)
         output, hidden = self.gru(emb, hidden)
         output, _ = pad_packed_sequence(output)
