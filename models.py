@@ -237,7 +237,7 @@ class FactoredLSTM(nn.Module):
                     output = output.squeeze(0).squeeze(0)
                     # log softmax
                     output = F.log_softmax(output)
-                    output[3] == -float('inf')
+                    output[3] = -float('inf')
                     output, indices = torch.sort(output, descending=True)
                     output = output[:beam_size]
                     indices = indices[:beam_size]
