@@ -26,6 +26,7 @@ def eval_outputs(outputs, vocab):
         print(caption)
 
 def main(args):
+    torch.cuda.set_device(6)
     model_path = args.model_path
     if not os.path.exists(model_path):
         os.makedirs(model_path)
