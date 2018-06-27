@@ -4,7 +4,7 @@ from torch.autograd import Variable
 from build_vocab import Vocab
 from data_loader import get_data_loader
 from data_loader import get_styled_data_loader
-from models import EncoderCNN
+from models import EncoderRNN
 from models import FactoredLSTM
 from loss import masked_cross_entropy
 
@@ -19,8 +19,8 @@ def main():
     data_loader = get_data_loader(img_path, cap_path, vocab, 3)
     styled_data_loader = get_styled_data_loader(styled_path, vocab, 3)
 
-    encoder = EncoderCNN(30)
-    decoder = FactoredLSTM(30, 40, 40, len(vocab))
+    encoder = EncoderRNN(voc_size=60376, emb_size=300, hidden_size=300)
+    decoder = FactoredLSTM(300, 512, 512, len(vocab))
 
     if torch.cuda.is_available():
         encoder = encoder.cuda()
