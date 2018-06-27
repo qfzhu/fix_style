@@ -163,7 +163,7 @@ class Rescale:
 
 def collate_fn(data):
     '''create minibatch tensors from data(list of tuple(image, caption))'''
-    data.sort(key=lambda x: len(x[1]), reverse=True)
+    data.sort(key=lambda x: len(x[0]), reverse=True)
     mes, trg = zip(*data)
 
     def col(samples):
