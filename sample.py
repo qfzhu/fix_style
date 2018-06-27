@@ -37,8 +37,8 @@ def main():
     encoder = EncoderRNN(voc_size=60736, emb_size=300, hidden_size=300)
     decoder = FactoredLSTM(300, 512, 512, len(vocab))
 
-    encoder.load_state_dict(torch.load('pretrained_models/encoder-3.pkl'))
-    decoder.load_state_dict(torch.load('pretrained_models/decoder-3.pkl'))
+    encoder.load_state_dict(torch.load('pretrained_models/encoder-4.pkl'))
+    decoder.load_state_dict(torch.load('pretrained_models/decoder-4.pkl'))
 
     # prepare images
     # transform = transforms.Compose([
@@ -55,14 +55,16 @@ def main():
     #     decoder = decoder.cuda()
 
     for i, (messages, m_lengths, targets, t_lengths) in enumerate(data_loader):
+        print(''.join([vocab.i2w[x] for x in messages[0]]))
         messages = to_var(messages.long())
         targets = to_var(targets.long())
 
         # forward, backward and optimize
         output, features = encoder(messages, list(m_lengths))
-        outputs = decoder.sample(features, mode="factual")
+        outputs = decoder.sample(features, mode="humorous")
         caption = [vocab.i2w[x] for x in outputs]
         print(''.join(caption))
+        print('-------')
 
     # farward
     # features = encoder(image)
