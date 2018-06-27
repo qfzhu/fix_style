@@ -33,7 +33,7 @@ class Flickr7kDataset(Dataset):
             targets = f.readlines()
 
         assert len(messages) == len(targets)
-        return zip(messages, targets)
+        return [p for p in zip(messages, targets)]
 
         # imgname_caption_list = []
         # r = re.compile(r'#\d*')
