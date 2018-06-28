@@ -60,7 +60,8 @@ def main(args):
     # loss and optimizer
     criterion = masked_cross_entropy
     cap_params = list(decoder.parameters()) + list(encoder.parameters())
-    lang_params = list(decoder.parameters())
+    lang_params = list(decoder.S_hc.parameters()) + list(decoder.S_hf.parameters()) \
+                  + list(decoder.S_hi.parameters()) + list(decoder.S_ho.parameters())
     optimizer_cap = torch.optim.Adam(cap_params, lr=args.lr_caption)
     optimizer_lang = torch.optim.Adam(lang_params, lr=args.lr_language)
 
